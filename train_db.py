@@ -49,9 +49,9 @@ def train(args):
     # データセットを準備する
     if args.dataset_class is None:
         blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, False, True))
-        if args.dataset_config is not None:
-            print(f"Load dataset config from {args.dataset_config}")
-            user_config = config_util.load_user_config(args.dataset_config)
+        if args.dataset_config_file is not None:
+            print(f"Load dataset config from {args.dataset_config_file}")
+            user_config = config_util.load_user_config(args.dataset_config_file)
             ignored = ["train_data_dir", "reg_data_dir"]
             if any(getattr(args, attr) is not None for attr in ignored):
                 print(

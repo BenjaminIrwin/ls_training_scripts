@@ -83,7 +83,7 @@ def train(args):
 
     cache_latents = args.cache_latents
     use_dreambooth_method = args.in_json is None
-    use_user_config = args.dataset_config is not None
+    use_user_config = args.dataset_config_file is not None
 
     if args.seed is None:
         args.seed = random.randint(0, 2**32)
@@ -95,8 +95,8 @@ def train(args):
     if args.dataset_class is None:
         blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, True))
         if use_user_config:
-            print(f"Loading dataset config from {args.dataset_config}")
-            user_config = config_util.load_user_config(args.dataset_config)
+            print(f"Loading dataset config from {args.dataset_config_file}")
+            user_config = config_util.load_user_config(args.dataset_config_file)
             ignored = ["train_data_dir", "reg_data_dir", "in_json"]
             if any(getattr(args, attr) is not None for attr in ignored):
                 print(
