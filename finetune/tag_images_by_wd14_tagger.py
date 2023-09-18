@@ -3,7 +3,10 @@ import csv
 import glob
 import os
 
-from PIL import Image
+from PIL import Image 
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
 import cv2
 from tqdm import tqdm
 import numpy as np

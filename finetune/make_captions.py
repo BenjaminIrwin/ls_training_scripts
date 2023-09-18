@@ -6,7 +6,10 @@ import random
 import sys
 
 from pathlib import Path
-from PIL import Image
+from PIL import Image 
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
 from tqdm import tqdm
 import numpy as np
 import torch

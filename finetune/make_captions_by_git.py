@@ -3,7 +3,10 @@ import os
 import re
 
 from pathlib import Path
-from PIL import Image
+from PIL import Image 
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
 from tqdm import tqdm
 import torch
 from transformers import AutoProcessor, AutoModelForCausalLM

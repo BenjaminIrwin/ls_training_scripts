@@ -6,7 +6,10 @@ from pathlib import Path
 from typing import List
 from tqdm import tqdm
 import numpy as np
-from PIL import Image
+from PIL import Image 
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
 import cv2
 import torch
 from torchvision import transforms

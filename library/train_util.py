@@ -55,7 +55,10 @@ from diffusers import (
 from huggingface_hub import hf_hub_download
 import albumentations as albu
 import numpy as np
-from PIL import Image
+from PIL import Image 
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
 import cv2
 from einops import rearrange
 from torch import einsum

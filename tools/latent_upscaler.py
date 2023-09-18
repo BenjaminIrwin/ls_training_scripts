@@ -13,7 +13,10 @@ import numpy as np
 import torch
 from torch import nn
 from tqdm import tqdm
-from PIL import Image
+from PIL import Image 
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
 
 
 class ResidualBlock(nn.Module):

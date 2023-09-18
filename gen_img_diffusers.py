@@ -88,7 +88,10 @@ from tqdm import tqdm
 from torchvision import transforms
 from transformers import CLIPTextModel, CLIPTokenizer, CLIPModel, CLIPTextConfig
 import PIL
-from PIL import Image
+from PIL import Image 
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
 from PIL.PngImagePlugin import PngInfo
 
 import library.model_util as model_util
