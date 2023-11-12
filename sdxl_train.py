@@ -739,8 +739,8 @@ def setup_parser() -> argparse.ArgumentParser:
 
 if __name__ == "__main__":
     parser = setup_parser()
-
     args = parser.parse_args()
+    print('Args parsed: ', args)
     args = train_util.read_config_from_file(args, parser)
-
+    print('Args after config file read: ', args)
     train(args)
