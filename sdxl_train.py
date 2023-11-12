@@ -738,6 +738,7 @@ def setup_parser() -> argparse.ArgumentParser:
 
 
 if __name__ == "__main__":
+    print("start")
     parser = setup_parser()
     args = parser.parse_args()
     print('Args parsed: ', args)
