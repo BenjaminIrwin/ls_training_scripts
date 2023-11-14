@@ -4,6 +4,8 @@ import argparse
 import gc
 import math
 import os
+import subprocess
+import sys
 from multiprocessing import Value
 from typing import List
 import toml
@@ -30,9 +32,12 @@ from library.custom_train_functions import (
 )
 from library.sdxl_original_unet import SdxlUNet2DConditionModel
 
-
 UNET_NUM_BLOCKS_FOR_BLOCK_LR = 23
 
+
+def install_bits_and_bytes():
+    print('Installing bitsandbytes...')
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "bitsandbytes==0.41.1"])
 
 def get_block_params_to_optimize(unet: SdxlUNet2DConditionModel, block_lrs: List[float]) -> List[dict]:
     block_params = [[] for _ in range(len(block_lrs))]
@@ -86,7 +91,8 @@ def append_block_lr_to_logs(block_lrs, logs, lr_scheduler, optimizer_type):
 
         if optimizer_type.lower().startswith("DAdapt".lower()) or optimizer_type.lower() == "Prodigy".lower():
             logs["lr/d*lr/" + name] = (
-                lr_scheduler.optimizers[-1].param_groups[lr_index]["d"] * lr_scheduler.optimizers[-1].param_groups[lr_index]["lr"]
+                    lr_scheduler.optimizers[-1].param_groups[lr_index]["d"] *
+                    lr_scheduler.optimizers[-1].param_groups[lr_index]["lr"]
             )
 
         lr_index += 1
@@ -99,13 +105,13 @@ def train(args):
 
     assert not args.weighted_captions, "weighted_captions is not supported currently / weighted_captionsは現在サポートされていません"
     assert (
-        not args.train_text_encoder or not args.cache_text_encoder_outputs
+            not args.train_text_encoder or not args.cache_text_encoder_outputs
     ), "cache_text_encoder_outputs is not supported when training text encoder / text encoderを学習するときはcache_text_encoder_outputsはサポートされていません"
 
     if args.block_lr:
         block_lrs = [float(lr) for lr in args.block_lr.split(",")]
         assert (
-            len(block_lrs) == UNET_NUM_BLOCKS_FOR_BLOCK_LR
+                len(block_lrs) == UNET_NUM_BLOCKS_FOR_BLOCK_LR
         ), f"block_lr must have {UNET_NUM_BLOCKS_FOR_BLOCK_LR} values / block_lrは{UNET_NUM_BLOCKS_FOR_BLOCK_LR}個の値を指定してください"
     else:
         block_lrs = None
@@ -255,7 +261,8 @@ def train(args):
         vae.requires_grad_(False)
         vae.eval()
         with torch.no_grad():
-            train_dataset_group.cache_latents(vae, args.vae_batch_size, args.cache_latents_to_disk, accelerator.is_main_process)
+            train_dataset_group.cache_latents(vae, args.vae_batch_size, args.cache_latents_to_disk,
+                                              accelerator.is_main_process)
         vae.to("cpu")
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -351,7 +358,8 @@ def train(args):
         args.max_train_steps = args.max_train_epochs * math.ceil(
             len(train_dataloader) / accelerator.num_processes / args.gradient_accumulation_steps
         )
-        accelerator.print(f"override steps. steps for {args.max_train_epochs} epochs is / 指定エポックまでのステップ数: {args.max_train_steps}")
+        accelerator.print(
+            f"override steps. steps for {args.max_train_epochs} epochs is / 指定エポックまでのステップ数: {args.max_train_steps}")
 
     # データセット側にも学習ステップを送信
     train_dataset_group.set_max_train_steps(args.max_train_steps)
@@ -362,7 +370,7 @@ def train(args):
     # 実験的機能：勾配も含めたfp16/bf16学習を行う　モデル全体をfp16/bf16にする
     if args.full_fp16:
         assert (
-            args.mixed_precision == "fp16"
+                args.mixed_precision == "fp16"
         ), "full_fp16 requires mixed precision='fp16' / full_fp16を使う場合はmixed_precision='fp16'を指定してください。"
         accelerator.print("enable full fp16 training.")
         unet.to(weight_dtype)
@@ -370,7 +378,7 @@ def train(args):
         text_encoder2.to(weight_dtype)
     elif args.full_bf16:
         assert (
-            args.mixed_precision == "bf16"
+                args.mixed_precision == "bf16"
         ), "full_bf16 requires mixed precision='bf16' / full_bf16を使う場合はmixed_precision='bf16'を指定してください。"
         accelerator.print("enable full bf16 training.")
         unet.to(weight_dtype)
@@ -386,7 +394,8 @@ def train(args):
         # transform DDP after prepare
         text_encoder1, text_encoder2, unet = train_util.transform_models_if_DDP([text_encoder1, text_encoder2, unet])
     else:
-        unet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(unet, optimizer, train_dataloader, lr_scheduler)
+        unet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(unet, optimizer, train_dataloader,
+                                                                              lr_scheduler)
         (unet,) = train_util.transform_models_if_DDP([unet])
         text_encoder1.to(weight_dtype)
         text_encoder2.to(weight_dtype)
@@ -422,14 +431,16 @@ def train(args):
     accelerator.print(f"  num examples / サンプル数: {train_dataset_group.num_train_images}")
     accelerator.print(f"  num batches per epoch / 1epochのバッチ数: {len(train_dataloader)}")
     accelerator.print(f"  num epochs / epoch数: {num_train_epochs}")
-    accelerator.print(f"  batch size per device / バッチサイズ: {', '.join([str(d.batch_size) for d in train_dataset_group.datasets])}")
+    accelerator.print(
+        f"  batch size per device / バッチサイズ: {', '.join([str(d.batch_size) for d in train_dataset_group.datasets])}")
     # accelerator.print(
     #     f"  total train batch size (with parallel & distributed & accumulation) / 総バッチサイズ（並列学習、勾配合計含む）: {total_batch_size}"
     # )
     accelerator.print(f"  gradient accumulation steps / 勾配を合計するステップ数 = {args.gradient_accumulation_steps}")
     accelerator.print(f"  total optimization steps / 学習ステップ数: {args.max_train_steps}")
 
-    progress_bar = tqdm(range(args.max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process, desc="steps")
+    progress_bar = tqdm(range(args.max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process,
+                        desc="steps")
     global_step = 0
 
     noise_scheduler = DDPMScheduler(
@@ -443,10 +454,11 @@ def train(args):
         init_kwargs = {}
         if args.log_tracker_config is not None:
             init_kwargs = toml.load(args.log_tracker_config)
-        accelerator.init_trackers("finetuning" if args.log_tracker_name is None else args.log_tracker_name, init_kwargs=init_kwargs)
+        accelerator.init_trackers("finetuning" if args.log_tracker_name is None else args.log_tracker_name,
+                                  init_kwargs=init_kwargs)
 
     for epoch in range(num_train_epochs):
-        accelerator.print(f"\nepoch {epoch+1}/{num_train_epochs}")
+        accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
         current_epoch.value = epoch + 1
 
         for m in training_models:
@@ -523,7 +535,8 @@ def train(args):
                 orig_size = batch["original_sizes_hw"]
                 crop_size = batch["crop_top_lefts"]
                 target_size = batch["target_sizes_hw"]
-                embs = sdxl_train_util.get_size_embeddings(orig_size, crop_size, target_size, accelerator.device).to(weight_dtype)
+                embs = sdxl_train_util.get_size_embeddings(orig_size, crop_size, target_size, accelerator.device).to(
+                    weight_dtype)
 
                 # concat embeddings
                 vector_embedding = torch.cat([pool2, embs], dim=1).to(weight_dtype)
@@ -531,7 +544,9 @@ def train(args):
 
                 # Sample noise, sample a random timestep for each image, and add noise to the latents,
                 # with noise offset and/or multires noise if specified
-                noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
+                noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                   noise_scheduler,
+                                                                                                   latents)
 
                 noisy_latents = noisy_latents.to(weight_dtype)  # TODO check why noisy_latents is not weight_dtype
 
@@ -615,10 +630,12 @@ def train(args):
                 if block_lrs is None:
                     logs["lr"] = float(lr_scheduler.get_last_lr()[0])
                     if (
-                        args.optimizer_type.lower().startswith("DAdapt".lower()) or args.optimizer_type.lower() == "Prodigy".lower()
+                            args.optimizer_type.lower().startswith(
+                                "DAdapt".lower()) or args.optimizer_type.lower() == "Prodigy".lower()
                     ):  # tracking d*lr value
                         logs["lr/d*lr"] = (
-                            lr_scheduler.optimizers[0].param_groups[0]["d"] * lr_scheduler.optimizers[0].param_groups[0]["lr"]
+                                lr_scheduler.optimizers[0].param_groups[0]["d"] *
+                                lr_scheduler.optimizers[0].param_groups[0]["lr"]
                         )
                 else:
                     append_block_lr_to_logs(block_lrs, logs, lr_scheduler, args.optimizer_type)
@@ -719,7 +736,8 @@ def setup_parser() -> argparse.ArgumentParser:
     custom_train_functions.add_custom_train_arguments(parser)
     sdxl_train_util.add_sdxl_training_arguments(parser)
 
-    parser.add_argument("--diffusers_xformers", action="store_true", help="use xformers by diffusers / Diffusersでxformersを使用する")
+    parser.add_argument("--diffusers_xformers", action="store_true",
+                        help="use xformers by diffusers / Diffusersでxformersを使用する")
     parser.add_argument("--train_text_encoder", action="store_true", help="train text encoder / text encoderも学習する")
     parser.add_argument(
         "--no_half_vae",
@@ -731,7 +749,7 @@ def setup_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help=f"learning rates for each block of U-Net, comma-separated, {UNET_NUM_BLOCKS_FOR_BLOCK_LR} values / "
-        + f"U-Netの各ブロックの学習率、カンマ区切り、{UNET_NUM_BLOCKS_FOR_BLOCK_LR}個の値",
+             + f"U-Netの各ブロックの学習率、カンマ区切り、{UNET_NUM_BLOCKS_FOR_BLOCK_LR}個の値",
     )
 
     return parser
@@ -739,6 +757,7 @@ def setup_parser() -> argparse.ArgumentParser:
 
 if __name__ == "__main__":
     print("start")
+    install_bits_and_bytes()
     parser = setup_parser()
     args = parser.parse_args()
     print('Args parsed: ', args)
