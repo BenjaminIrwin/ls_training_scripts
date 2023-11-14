@@ -6,6 +6,8 @@ import argparse
 import itertools
 import math
 import os
+import subprocess
+import sys
 from multiprocessing import Value
 import toml
 
@@ -32,6 +34,9 @@ from library.custom_train_functions import (
 
 # perlin_noise,
 
+def install_bits_and_bytes():
+    print('Installing bitsandbytes...')
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "bitsandbytes==0.41.1"])
 
 def train(args):
     train_util.verify_training_args(args)
@@ -473,6 +478,8 @@ def setup_parser() -> argparse.ArgumentParser:
 
 
 if __name__ == "__main__":
+    print("start")
+    install_bits_and_bytes()
     parser = setup_parser()
 
     args = parser.parse_args()
