@@ -39,9 +39,6 @@ def install_bits_and_bytes():
     subprocess.check_call([sys.executable, "-m", "pip", "install", "bitsandbytes==0.41.1"])
 
 def train(args):
-    if True:
-        raise NotImplementedError("This script is not supported yet. Please use train_db.py instead.")
-
     train_util.verify_training_args(args)
     train_util.prepare_dataset_args(args, False)
 
